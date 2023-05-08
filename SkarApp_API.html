@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>6. SkarApp API &#8212; RISE Drone Platform v1.3.0.post36-g455f561 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="7. APP Selfie API" href="APP_selfie_API.html" />
+    <link rel="prev" title="5. TYRApp API" href="TYRApp_API.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="skarapp-api">
+<span id="skarappapi"></span><h1><span class="section-number">6. </span>SkarApp API<a class="headerlink" href="#skarapp-api" title="Permalink to this heading">¶</a></h1>
+<p id="index-0">The SkarApp is an application to support a cyclist.
+The main function is to have two drones following the
+remote that the cyclist carries, Skaramote, providing dynamic spotlights on the road.</p>
+<section id="communication">
+<h2><span class="section-number">6.1. </span>Communication<a class="headerlink" href="#communication" title="Permalink to this heading">¶</a></h2>
+<p id="index-1">SkarApp extends the drone application library to support the Skaramote,
+<a class="reference internal" href="Application_API.html#appapi"><span class="std std-ref">Application API</span></a>. The extended API is described in this chapter.</p>
+</section>
+<section id="skarapp-extension-api">
+<span id="index-2"></span><h2><span class="section-number">6.2. </span>SkarApp Extension API<a class="headerlink" href="#skarapp-extension-api" title="Permalink to this heading">¶</a></h2>
+<p>Information is carried by JSON objects that are sent over the ZeroMQ
+REQ/REP interface.</p>
+<section id="fcn-follow-her">
+<span id="followher-skara"></span><h3><span class="section-number">6.2.1. </span>Fcn: follow_her<a class="headerlink" href="#fcn-follow-her" title="Permalink to this heading">¶</a></h3>
+<p>The function “follow_her” is called to tell app Skara to aquire drones to follow
+the targed specified by <code class="docutils literal notranslate"><span class="pre">target_id</span></code>. Prior to calling “follow_her” the target
+id LLA-stream must be enabled on her dynamic publish-socket. The flight pattern
+used is “above”, where relative altitude is specified as a parameter in the
+config file. The message contains a key <code class="docutils literal notranslate"><span class="pre">enable</span></code> to enable or disable
+following drones. Disabling follow her will return and land any allocated
+drones. The key <code class="docutils literal notranslate"><span class="pre">capabilities</span></code> is a list of capabilities that the following
+drones must match.</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">Request: <strong>follow_her</strong></span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;follow_her&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;appliction support id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="linenos">5</span><span class="w">  </span><span class="nt">&quot;target_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;da001&quot;</span>
+<span class="linenos">6</span><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;SPOTLIGHT&quot;</span><span class="p">]</span>
+<span class="linenos">7</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>Requestor (id) is not the app owner</p></li>
+<li><p>Missing target id</p></li>
+<li><p>Target id not found</p></li>
+<li><p>Follow her already enabled</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+</section>
+<section id="skarapp-info-api">
+<h2><span class="section-number">6.3. </span>SkarApp Info API<a class="headerlink" href="#skarapp-info-api" title="Permalink to this heading">¶</a></h2>
+<p>In order to control two drones following the same stream, and to make sure that the drone is following the road, SkarApp publishes a modified
+LLA stream for each drone based on the LLA-stream from the target in <a class="reference internal" href="#followher-skara"><span class="std std-ref">Fcn: follow_her</span></a>. These modified streams are used when calling <a class="reference internal" href="DSS_API.html#follow-stream"><span class="std std-ref">Fcn: follow_stream</span></a> for each drone.
+The ports for publishing are dynamically allocated in the interval [crm.port, crm.port+50].</p>
+</section>
+</section>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo-rise-html.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="index.html">RISE Drone Platform</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DSS_API.html">2. Drone Safety System API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CRM_API.html">3. Central Resource Manager API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Application_API.html">4. Application API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="TYRApp_API.html">5. TYRApp API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">6. SkarApp API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#communication">6.1. Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#skarapp-extension-api">6.2. SkarApp Extension API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-follow-her">6.2.1. Fcn: follow_her</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#skarapp-info-api">6.3. SkarApp Info API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="APP_selfie_API.html">7. APP Selfie API</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="TYRApp_API.html" title="previous chapter"><span class="section-number">5. </span>TYRApp API</a></li>
+      <li>Next: <a href="APP_selfie_API.html" title="next chapter"><span class="section-number">7. </span>APP Selfie API</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Andreas Gising, Lennart Ochel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/SkarApp_API.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

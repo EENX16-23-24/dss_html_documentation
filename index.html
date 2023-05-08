@@ -1,0 +1,284 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>RISE Drone Platform &#8212; RISE Drone Platform v1.3.0.post36-g455f561 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="1. Introduction" href="introduction.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="rise-drone-platform">
+<h1>RISE Drone Platform<a class="headerlink" href="#rise-drone-platform" title="Permalink to this heading">¶</a></h1>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>documentation</p></th>
+<th class="head"><p>v1.3.0.post36-g455f561</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>companion_computer/ardupilot</p></td>
+<td><p>unknown</p></td>
+</tr>
+<tr class="row-odd"><td><p>companion_computer/dji</p></td>
+<td><p>unknown</p></td>
+</tr>
+</tbody>
+</table>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#document-history">1.1. Document History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#platform-overview">1.2. Platform Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#communication">1.3. Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#autopilots">1.4. Autopilots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#apis">1.5. APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#prefered-work-flow">1.6. Prefered Work Flow</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="DSS_API.html">2. Drone Safety System API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="DSS_API.html#communication">2.1. Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DSS_API.html#coordinate-systems">2.2. Coordinate systems</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#lla-coordinate-system">2.2.1. LLA coordinate system</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#ned-coordinate-system">2.2.2. NED coordinate system</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#xyz-coordinate-system">2.2.3. XYZ coordinate system</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#geo-fence">2.2.4. Geo fence</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="DSS_API.html#dss-ctrl-link-api">2.3. DSS Ctrl-link API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#general">2.3.1. General</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-heart-beat">2.3.2. Fcn: <code class="docutils literal notranslate"><span class="pre">heart_beat</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-info">2.3.3. Fcn: get_info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-who-controls">2.3.4. Fcn: <code class="docutils literal notranslate"><span class="pre">who_controls</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-owner">2.3.5. Fcn: <code class="docutils literal notranslate"><span class="pre">get_owner</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-owner">2.3.6. Fcn: <code class="docutils literal notranslate"><span class="pre">set_owner</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-geofence">2.3.7. Fcn: <code class="docutils literal notranslate"><span class="pre">set_geofence</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-idle">2.3.8. Fcn: <code class="docutils literal notranslate"><span class="pre">get_idle</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-state">2.3.9. Fcn: <code class="docutils literal notranslate"><span class="pre">get_state</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-init-point">2.3.10. Fcn: <code class="docutils literal notranslate"><span class="pre">set_init_point</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-reset-dss-srtl">2.3.11. Fcn: <code class="docutils literal notranslate"><span class="pre">reset_dss_srtl</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-arm-take-off">2.3.12. Fcn: <code class="docutils literal notranslate"><span class="pre">arm_take_off</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-land">2.3.13. Fcn: <code class="docutils literal notranslate"><span class="pre">land</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-rtl">2.3.14. Fcn: <code class="docutils literal notranslate"><span class="pre">rtl</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-dss-srtl">2.3.15. Fcn: <code class="docutils literal notranslate"><span class="pre">dss_srtl</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-vel-body">2.3.16. Fcn: <code class="docutils literal notranslate"><span class="pre">set_vel_BODY</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-heading">2.3.17. Fcn: <code class="docutils literal notranslate"><span class="pre">set_heading</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-alt">2.3.18. Fcn: <code class="docutils literal notranslate"><span class="pre">set_alt</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-default-speed">2.3.19. Fcn: <code class="docutils literal notranslate"><span class="pre">set_default_speed</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-upload-mission-lla">2.3.20. Fcn: <code class="docutils literal notranslate"><span class="pre">upload_mission_LLA</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-upload-mission-ned">2.3.21. Fcn: <code class="docutils literal notranslate"><span class="pre">upload_mission_NED</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-upload-mission-xyz">2.3.22. Fcn: <code class="docutils literal notranslate"><span class="pre">upload_mission_XYZ</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-gogo">2.3.23. Fcn: <code class="docutils literal notranslate"><span class="pre">gogo</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-pattern">2.3.24. Fcn: <code class="docutils literal notranslate"><span class="pre">set_pattern</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-follow-stream">2.3.25. Fcn: <code class="docutils literal notranslate"><span class="pre">follow_stream</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-gimbal">2.3.26. Fcn: <code class="docutils literal notranslate"><span class="pre">set_gimbal</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-gripper">2.3.27. Fcn: <code class="docutils literal notranslate"><span class="pre">set_gripper</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-set-spotlight">2.3.28. Fcn: <code class="docutils literal notranslate"><span class="pre">set_spotlight</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-spotlight">2.3.29. Fcn: <code class="docutils literal notranslate"><span class="pre">get_spotlight</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-photo">2.3.30. Fcn: <code class="docutils literal notranslate"><span class="pre">photo</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-armed">2.3.31. Fcn: <code class="docutils literal notranslate"><span class="pre">get_armed</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-currentwp">2.3.32. Fcn: <code class="docutils literal notranslate"><span class="pre">get_currentWP</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-flightmode">2.3.33. Fcn: <code class="docutils literal notranslate"><span class="pre">get_flightmode</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-metadata">2.3.34. Fcn: <code class="docutils literal notranslate"><span class="pre">get_metadata</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-posd">2.3.35. Fcn: <code class="docutils literal notranslate"><span class="pre">get_posD</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-get-pwm">2.3.36. Fcn: <code class="docutils literal notranslate"><span class="pre">get_PWM</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-disconnect">2.3.37. Fcn: <code class="docutils literal notranslate"><span class="pre">disconnect</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#fcn-data-stream">2.3.38. Fcn: <code class="docutils literal notranslate"><span class="pre">data_stream</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="DSS_API.html#dss-info-link-api">2.4. DSS Info-link API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#state-state-data">2.4.1. STATE - State data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#att-attitude-data">2.4.2. ATT - Attitude data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#lla-global-position-data">2.4.3. LLA - Global position data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#ned-local-position-data">2.4.4. NED - Local position data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#xyz-local-position-data">2.4.5. XYZ - Local position data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#photo-lla-photo-available-with-metadata">2.4.6. Photo LLA - photo available with Metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#photo-xyz-new-photo-metadata">2.4.7. Photo XYZ - new photo metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#current-wp-mission-progress">2.4.8. Current WP - Mission progress</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#battery-battery-status">2.4.9. Battery - Battery status</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="DSS_API.html#dss-data-link-api">2.5. DSS Data-link API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="DSS_API.html#photo-download">2.5.1. Photo download</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="CRM_API.html">3. Central Resource Manager API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="CRM_API.html#communication">3.1. Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="CRM_API.html#crm-ctrl-link-api">3.2. CRM Ctrl-link API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#general">3.2.1. General</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-register">3.2.2. Fcn: register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-unregister">3.2.3. Fcn: unregister</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-get-info">3.2.4. Fcn: get_info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-get-drone">3.2.5. Fcn: get_drone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-get-performance">3.2.6. Fcn: get_performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-get-processes">3.2.7. Fcn: get_processes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-kill-process">3.2.8. Fcn: kill_process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-release-drone">3.2.9. Fcn: release_drone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-handover">3.2.10. Fcn: handover</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-launch-app">3.2.11. Fcn: launch_app</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-clients">3.2.12. Fcn: clients</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#fcn-app-lost">3.2.13. Fcn: app_lost</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="CRM_API.html#crm-info-link-api">3.3. CRM Info-link API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#clients-client-list-updated">3.3.1. CLIENTS - Client list updated</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="CRM_API.html#flows">3.4. Flows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CRM_API.html#drone-ownership-flow">3.4.1. Drone ownership flow</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Application_API.html">4. Application API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Application_API.html#communication">4.1. Communication</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Application_API.html#typical-flow">4.1.1. Typical Flow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Application_API.html#appcontrollapi">4.2. Application API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Application_API.html#general">4.2.1. General</a></li>
+<li class="toctree-l3"><a class="reference internal" href="Application_API.html#fcn-release-dss-depricated">4.2.2. Fcn: release_dss DEPRICATED</a></li>
+<li class="toctree-l3"><a class="reference internal" href="Application_API.html#fcn-push-dss">4.2.3. Fcn: push_dss</a></li>
+<li class="toctree-l3"><a class="reference internal" href="Application_API.html#fcn-get-info">4.2.4. Fcn: get_info</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Application_API.html#info-link-api">4.3. Info-link API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="TYRApp_API.html">5. TYRApp API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="TYRApp_API.html#communication">5.1. Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="TYRApp_API.html#tyraapp-extension-api">5.2. TYRAapp Extension API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="TYRApp_API.html#fcn-set-pattern">5.2.1. Fcn: set_pattern</a></li>
+<li class="toctree-l3"><a class="reference internal" href="TYRApp_API.html#fcn-follow-me">5.2.2. Fcn: follow_me</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="TYRApp_API.html#tyrapp-info-link-api">5.3. TYRApp Info-link API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="TYRApp_API.html#clients-stream">5.3.1. Clients stream</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="SkarApp_API.html">6. SkarApp API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="SkarApp_API.html#communication">6.1. Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="SkarApp_API.html#skarapp-extension-api">6.2. SkarApp Extension API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="SkarApp_API.html#fcn-follow-her">6.2.1. Fcn: follow_her</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="SkarApp_API.html#skarapp-info-api">6.3. SkarApp Info API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="APP_selfie_API.html">7. APP Selfie API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="APP_selfie_API.html#communication">7.1. Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="APP_selfie_API.html#app-selfie-extension-api">7.2. APP_Selfie Extension API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="APP_selfie_API.html#fcn-set-pattern">7.2.1. Fcn: set_pattern</a></li>
+<li class="toctree-l3"><a class="reference internal" href="APP_selfie_API.html#fcn-follow-her">7.2.2. Fcn: follow_her</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+<li><p><a class="reference internal" href="todo.html#todo"><span class="std std-ref">Todo List</span></a></p></li>
+</ul>
+</section>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/logo-rise-html.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="#">RISE Drone Platform</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DSS_API.html">2. Drone Safety System API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CRM_API.html">3. Central Resource Manager API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Application_API.html">4. Application API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="TYRApp_API.html">5. TYRApp API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SkarApp_API.html">6. SkarApp API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="APP_selfie_API.html">7. APP Selfie API</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="introduction.html" title="next chapter"><span class="section-number">1. </span>Introduction</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Andreas Gising, Lennart Ochel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

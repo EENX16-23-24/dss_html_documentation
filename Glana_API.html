@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>API between GLANA-application and GLANA-control &#8212; RISE Drone Platform v1.3.0.post36-g455f561 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="api-between-glana-application-and-glana-control">
+<h1>API between GLANA-application and GLANA-control<a class="headerlink" href="#api-between-glana-application-and-glana-control" title="Permalink to this heading">¶</a></h1>
+<p>In the GLANA integration a Lumenera 16059H is integrated to the drone
+platform. In the architecture there are two single card computers and
+three processes; DSS, GLANA-application and GLANA-control. DSS and
+GLANA-application runs on a Raspberry Pi3B+, the GLANA-control runs on
+a Jetson TX2 installed on a J120 carrier board. Raspberry Pi and
+Jetson are connected via Ethernet where Jetson distributes DHCP.</p>
+<p>The DSS offers an API towards GLANA-application, it is documented
+earlier in this document. The GLANA-application and GLANA-control uses
+the API described in this chapter.</p>
+<section id="communication">
+<h2>Communication<a class="headerlink" href="#communication" title="Permalink to this heading">¶</a></h2>
+<p>The communication is carried as JSON-messages via ZeroMQ. Socket
+description TBD. There are two ZMQ connections between application and
+control: control-link and logdata-link. They are further described in
+the following sections.</p>
+<p>The IP number setup is as follows.</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">IP numbers</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;Raspberry Pi&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.0.2&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;Jetson&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.0.1&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The ports used are described in Settings.json. The programs should
+read their settings from this file.</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Settings.json-file</span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;DSSServSocket&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tcp://*:5557&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;DSSClientSocket&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tcp://localhost:5557&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;DSSPubSocket&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tcp://*:5558&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;DSSSubSocket&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tcp://192.168.2.2:5558&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;GlanaClientSocket&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tcp://192.168.2.3:5562&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;GlanaServSocket&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tcp://*:5562&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="control-link">
+<h2>Control-link<a class="headerlink" href="#control-link" title="Permalink to this heading">¶</a></h2>
+<p>The control link is set up as a Request and Reply type. The
+GLANA-application will Request Replies from the GLANA-control.</p>
+<p>General function call and ack/nack functions:</p>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">JSON object function call</span><a class="headerlink" href="#id3" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;the_name_of_the_function&quot;</span>
+<span class="w">  </span><span class="nt">&quot;arg&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;arg1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;arg2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string_argument_example&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>Response from GLANA-control.</p>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">JSON object function call response</span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;ack&quot;</span>
+<span class="w">  </span><span class="nt">&quot;arg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;the_name_of_the_function&quot;</span>
+<span class="p">}</span>
+
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;nack&quot;</span>
+<span class="w">  </span><span class="nt">&quot;arg&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;the_name_of_the_function&quot;</span>
+<span class="w">  </span><span class="nt">&quot;arg2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Some text describing the issue&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<section id="fcn-up">
+<h3>Fcn: up<a class="headerlink" href="#fcn-up" title="Permalink to this heading">¶</a></h3>
+<p>The function up requests the GLANA-control to ack that it is alive. If
+the message is received and interpreted correctly GLANA-control
+replies with an ack, otherwise with a nack.</p>
+<div class="literal-block-wrapper docutils container" id="id5">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>up</strong></span><a class="headerlink" href="#id5" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;up&quot;</span>
+<span class="w">  </span><span class="nt">&quot;arg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-start-camera">
+<h3>Fcn: start_camera<a class="headerlink" href="#fcn-start-camera" title="Permalink to this heading">¶</a></h3>
+<p>The function start_camera requests the GLANA-control to start camera
+recording and save collected data at the path given as argument. If
+the message is received and interpreted correctly GLANA-control
+replies with an ack, otherwise with a nack.</p>
+<div class="literal-block-wrapper docutils container" id="id6">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>start_recording</strong></span><a class="headerlink" href="#id6" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;start_rec&quot;</span>
+<span class="w">  </span><span class="nt">&quot;arg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;path/examplepath/example_path&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-stop-camera">
+<h3>Fcn: stop_camera<a class="headerlink" href="#fcn-stop-camera" title="Permalink to this heading">¶</a></h3>
+<p>The function stop_camera requests the GLANA-control to stop camera
+recording. If the message is received and interpreted correctly
+GLANA-control replies with an ack, otherwise with a nack.</p>
+<div class="literal-block-wrapper docutils container" id="id7">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>stop_recording</strong></span><a class="headerlink" href="#id7" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;stop_rec&quot;</span>
+<span class="w">  </span><span class="nt">&quot;arg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-rec-ok">
+<h3>Fcn: rec_ok<a class="headerlink" href="#fcn-rec-ok" title="Permalink to this heading">¶</a></h3>
+<p>The function rec_ok requests the recording status from GLANA-control.
+If the camera is recording GLANA-control shall reply with an ack, if
+the camera is not recording GLANA-control shall reply with a nack.
+This is a special use case for the ack/nack structure defined.</p>
+<div class="literal-block-wrapper docutils container" id="id8">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>rec_ok</strong></span><a class="headerlink" href="#id8" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;rec_ok&quot;</span>
+<span class="w">  </span><span class="nt">&quot;arg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="logdata-link">
+<h2>Logdata-link<a class="headerlink" href="#logdata-link" title="Permalink to this heading">¶</a></h2>
+<p>The logdata-link is set up as Publish Subscribe type. The
+GLANA-application acquire the DSS to Publish data and GLANA-control
+will Subscribe to data.</p>
+<p>The logdata Published is in the formats described in the following
+sections.</p>
+<section id="gps-data">
+<h3>GPS data<a class="headerlink" href="#gps-data" title="Permalink to this heading">¶</a></h3>
+<p>GPS data is given in the location global frame, lat [decimal
+degreees], long[decimal degrees], alt [meters a above sea level]. Data
+rate is around 3Hz.</p>
+<div class="literal-block-wrapper docutils container" id="id9">
+<div class="code-block-caption"><span class="caption-text">Data: <strong>location_global_frame</strong></span><a class="headerlink" href="#id9" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;Data&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lgf&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;lat&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">58.3254094</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;lon&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">15.6324897</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;alt&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">114.1</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="attitude-data">
+<h3>Attitude data<a class="headerlink" href="#attitude-data" title="Permalink to this heading">¶</a></h3>
+<p>The attitude data is given in the copter coordinate system, r
+[radians], p [radians], y [radians true north]. R, p and y is for
+roll, pitch and yaw. Positive roll is leaning right, positive pitch is
+nose up, yaw increases in clockwise direction. Data rate is
+approximately 10Hz.</p>
+<div class="literal-block-wrapper docutils container" id="id10">
+<div class="code-block-caption"><span class="caption-text">Data: <strong>attitude</strong></span><a class="headerlink" href="#id10" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;Data&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;att&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;r&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-0.0018926148768514395</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;p&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0014366497052833438</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0123</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="gimbal-attitude-data">
+<h3>Gimbal attitude data<a class="headerlink" href="#gimbal-attitude-data" title="Permalink to this heading">¶</a></h3>
+<p>The gimbal attitude data is given in the copter coordinate system, r
+[radians], p [radians], y [radians true north]. R, p and y is for
+roll, pitch and yaw. Positive roll is leaning right, positive pitch is
+nose up, yaw increases in clockwise direction. Data rate is not known
+yet..</p>
+<div class="literal-block-wrapper docutils container" id="id11">
+<div class="code-block-caption"><span class="caption-text">Data: <strong>gimbal_attitude</strong></span><a class="headerlink" href="#id11" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;Data&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gatt&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;r&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-0.00189261</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;p&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.001436642</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0123</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo-rise-html.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="index.html">RISE Drone Platform</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DSS_API.html">2. Drone Safety System API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CRM_API.html">3. Central Resource Manager API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Application_API.html">4. Application API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="TYRApp_API.html">5. TYRApp API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SkarApp_API.html">6. SkarApp API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="APP_selfie_API.html">7. APP Selfie API</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Andreas Gising, Lennart Ochel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/Glana_API.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

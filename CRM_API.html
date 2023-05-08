@@ -1,0 +1,1072 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>3. Central Resource Manager API &#8212; RISE Drone Platform v1.3.0.post36-g455f561 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="4. Application API" href="Application_API.html" />
+    <link rel="prev" title="2. Drone Safety System API" href="DSS_API.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="central-resource-manager-api">
+<span id="crmapi"></span><h1><span class="section-number">3. </span>Central Resource Manager API<a class="headerlink" href="#central-resource-manager-api" title="Permalink to this heading">¶</a></h1>
+<p id="index-0">The Central Resource Manager (CRM) manages resources in the RISE drone
+platform. RISE hosts the CRM on a server based in Kista and the way to
+access it is via an OpenVPN-connection. The CRM can be hosted on any
+unix machine.</p>
+<section id="communication">
+<h2><span class="section-number">3.1. </span>Communication<a class="headerlink" href="#communication" title="Permalink to this heading">¶</a></h2>
+<p id="index-1">The Central Resource Controller offers two external interfaces towards all clients: the CRM
+Ctrl Reply-socket for sending requests to and the CRM Info
+Publish-socket that publishes the client lists as soon as there are
+changes. API for the reply-socket is described in
+<a class="reference internal" href="#crmcontrolapi"><span class="std std-ref">CRM Ctrl-link API</span></a>.</p>
+<p>The CRM is available for all connecting ip-numbers on a given port.
+RISE hosts several CRM instances on the same server so the port
+numbers are not fixed. RISE uses different subnets in the VPN solution
+in combination with firewall settings to separate different CRM
+instances and clients running different operations. Clients from one
+subnet can only communicate with the assigned CRM instance and to
+other clients on the same subnet.</p>
+<p>The port of the CRM running on each subnet is calculated as
+subnet*100, where subnet can be identified from the IP-address like
+so: 10.44.subnet.xxx.</p>
+<p>The IP (VPN) address to the RISE-server called dronehost is
+<code class="docutils literal notranslate"><span class="pre">10.44.160.10</span></code>.</p>
+<p>The dronehost also hosts a web server with visualisation of crm
+status, it is reached at ‘’10.44.160.10’’, port ‘80’.</p>
+<p>The port used for Info Publish-socket is not deterministic must be
+requested using the <a class="reference internal" href="#fcninfo"><span class="std std-ref">Fcn: get_info</span></a>.</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">Usage of CRM service</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&gt; ./crm.py --help
+usage: crm.py --ip IP --port PORT [--stdout] [--virgin]
+
+CRM &quot;Central Resource Manager&quot;
+
+optional arguments:
+  --ip IP      public ip of the CRM server
+  --port PORT  defines the port for the ctrl-reply socket
+  --stdout     enables logging to stdout
+  --virgin     defines if to start from a backup or not
+</pre></div>
+</div>
+</div>
+</section>
+<section id="crm-ctrl-link-api">
+<span id="crmcontrolapi"></span><h2><span class="section-number">3.2. </span>CRM Ctrl-link API<a class="headerlink" href="#crm-ctrl-link-api" title="Permalink to this heading">¶</a></h2>
+<section id="general">
+<span id="index-2"></span><h3><span class="section-number">3.2.1. </span>General<a class="headerlink" href="#general" title="Permalink to this heading">¶</a></h3>
+<p>The ZeroMQ REQ/REP interface takes function calls as JSON objects with two
+mandatory keys, “fcn” and “id”, the string values are the function
+name and the application id. Additional keys are described in this API
+chapter. Each function call gets an ack or a nack where the key “call”
+holds the name of the calling function. A generic example follows:</p>
+<p>Function call from client to Central Resource Controller:</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Generic function call</span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;function name&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>Response from Central Resource Controller is an ack or a nack. The key “call” carries the
+name of the function called. Some functions uses the ack reply to
+transfer data, refer to API. A nack includes the key “description”
+that carries a nack description string.</p>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">Generic ack response</span><a class="headerlink" href="#id3" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;function_name&gt;&quot;</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Generic nack response</span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;nack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;function name&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Some text describing the issue&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-register">
+<span id="fcnregister"></span><h3><span class="section-number">3.2.2. </span>Fcn: register<a class="headerlink" href="#fcn-register" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>All clients (i.e applications and DSSs) in the network registers to
+the CRM. It is done via the function <code class="docutils literal notranslate"><span class="pre">register</span></code>. The CRM will reply
+with a unique id that the client from this point must use in all calls
+to all clients, including calls to the CRM.</p>
+<p>The key <code class="docutils literal notranslate"><span class="pre">id</span></code> must be set to an empty string (see note below though).
+Set keys <code class="docutils literal notranslate"><span class="pre">name</span></code> and <code class="docutils literal notranslate"><span class="pre">description</span></code> per your own choice. For key
+<code class="docutils literal notranslate"><span class="pre">type</span></code> supply your type: ‘da’ for drone application, ‘dsa’ for drone
+support application and ‘dss’ for DSS. Also provide the local ip
+address as a string in key <code class="docutils literal notranslate"><span class="pre">ip</span></code> and your reply port as an in in key
+<code class="docutils literal notranslate"><span class="pre">port</span></code>, this is how other clients will make contact with your
+client.</p>
+<p>All clients must provide a list of <code class="docutils literal notranslate"><span class="pre">capabilities</span></code>. However, note that
+this list is allowed to be empty. Each capability is represented as a string.
+The lists of capabilities are used by the CRM to allocate available resources when
+applications require a drone with certain capabilities to perform a task. The following capabilities are supported:</p>
+<ul class="simple">
+<li><p>SIM - Drone is simulated</p></li>
+<li><p>REAL - Drone is not simulated</p></li>
+<li><p>C0 - Drone is C0 compatible, below 250g. Note second char is a zero - Charlie Zero.</p></li>
+<li><p>RTK - RTK compatible</p></li>
+<li><p>RGB - RGB camera compatible</p></li>
+<li><p>IR - IR camera compatible</p></li>
+<li><p>LMD - Drone can do last mile delivery, can carry and drop load.</p></li>
+<li><p>STREAM - Drone can stream video</p></li>
+<li><p>SPOTLIGHT - Drone has a spotlight</p></li>
+</ul>
+<p>If the CRM responds with an ack and the registering client is DSS it
+shall set it’s owner to ‘crm’.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When register is called by a client, it is unaware of its id (exceptions exist). Use
+empty string for id unless CRM initiated your process and already
+allocated a specific id.</p>
+</div>
+<div class="literal-block-wrapper docutils container" id="id5">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>register</strong></span><a class="headerlink" href="#id5" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="p">{</span>
+<span class="linenos"> 2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;register&quot;</span><span class="p">,</span>
+<span class="linenos"> 3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="linenos"> 4</span><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DSS HX003&quot;</span><span class="p">,</span>
+<span class="linenos"> 5</span><span class="w">  </span><span class="nt">&quot;desc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;description&gt;&quot;</span><span class="p">,</span>
+<span class="linenos"> 6</span><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;C0&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;REAL&quot;</span><span class="p">],</span>
+<span class="linenos"> 7</span><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dss&quot;</span><span class="p">,</span>
+<span class="linenos"> 8</span><span class="w">  </span><span class="nt">&quot;ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span>
+<span class="linenos"> 9</span><span class="w">  </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1234</span>
+<span class="linenos">10</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The reply holds the unique id that is used in all communication.</p>
+<div class="literal-block-wrapper docutils container" id="id6">
+<div class="code-block-caption"><span class="caption-text">Reply: <strong>register</strong></span><a class="headerlink" href="#id6" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;register&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;assigned client id&gt;&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>bad arguments</p></li>
+<li><p>bad ip</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="fcn-unregister">
+<span id="fcnunregister"></span><h3><span class="section-number">3.2.3. </span>Fcn: unregister<a class="headerlink" href="#fcn-unregister" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function unregister is used to tell CRM that a client will not
+longer be available on the network. The CRM replies with an ack if the
+id is currently registered, otherwise nack.</p>
+<p>If the CRM responds with an ack and the calling client is DSS it shall
+set it’s owner to ‘da000’.</p>
+<div class="literal-block-wrapper docutils container" id="id7">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>unregister</strong></span><a class="headerlink" href="#id7" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;unregister&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>bad arguments</p></li>
+<li><p>unknown requestor id</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="fcn-get-info">
+<span id="fcninfo"></span><h3><span class="section-number">3.2.4. </span>Fcn: get_info<a class="headerlink" href="#fcn-get-info" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function get_info requests status information of the CRM.</p>
+<div class="literal-block-wrapper docutils container" id="id8">
+<div class="code-block-caption"><span class="caption-text">Function call: <code class="docutils literal notranslate"><span class="pre">get_info</span></code></span><a class="headerlink" href="#id8" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id9">
+<div class="code-block-caption"><span class="caption-text">Reply: <code class="docutils literal notranslate"><span class="pre">get_info</span></code></span><a class="headerlink" href="#id9" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;replier id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">5</span><span class="w">  </span><span class="nt">&quot;info_pub_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1234</span><span class="p">,</span>
+<span class="linenos">6</span><span class="w">  </span><span class="nt">&quot;data_pub_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5678</span>
+<span class="linenos">7</span><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;version&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">8</span><span class="w">  </span><span class="nt">&quot;git_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;version&gt;-&lt;hash&gt;&quot;</span>
+<span class="linenos">9</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-get-drone">
+<span id="fcngetdrone"></span><h3><span class="section-number">3.2.5. </span>Fcn: get_drone<a class="headerlink" href="#fcn-get-drone" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function get_drone requests a drone resource from the CRM. Specific capabilities
+or unique drone id can be requested. It is mandatory to use one of
+the two arguments “capabilities” and “force”.</p>
+<div class="literal-block-wrapper docutils container" id="id10">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>get_drone</strong> with capabilities</span><a class="headerlink" href="#id10" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_drone&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;RGB&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;RTK&quot;</span><span class="p">]</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id11">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>get_drone</strong> with forced id</span><a class="headerlink" href="#id11" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_drone&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;force&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;forced id&gt;&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The CRM replies with id and endpoint information:</p>
+<div class="literal-block-wrapper docutils container" id="id12">
+<div class="code-block-caption"><span class="caption-text">Reply: <strong>get_drone</strong></span><a class="headerlink" href="#id12" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_drone&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;assigned drone id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">5</span><span class="w">  </span><span class="nt">&quot;ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">6</span><span class="w">  </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1234</span>
+<span class="linenos">7</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>bad arguments</p></li>
+<li><p>unknown requestor id</p></li>
+<li><p>unknown forced id</p></li>
+<li><p>forced id not available</p></li>
+<li><p>forced id is stale</p></li>
+<li><p>No available drone with requested capabilities</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="fcn-get-performance">
+<span id="fcncrmgetperformance"></span><h3><span class="section-number">3.2.6. </span>Fcn: get_performance<a class="headerlink" href="#fcn-get-performance" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function get_performance requests the CRM to reply with information about the performance of the computer where the CRM is running,
+including CPU, memory and load.</p>
+<div class="literal-block-wrapper docutils container" id="id13">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>get_performance</strong></span><a class="headerlink" href="#id13" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_performance&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The CRM replies with an ack and a string which captures the performance information:</p>
+<div class="literal-block-wrapper docutils container" id="id14">
+<div class="code-block-caption"><span class="caption-text">Reply: <strong>get_performance</strong></span><a class="headerlink" href="#id14" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_performance&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;performance&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;000.0% @ 1701.6182499999998MHz x 24 (000%, 000%, 000%) - 005.6% of 20048MB - time 07:40:19&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-get-processes">
+<span id="fcncrmgetprocesses"></span><h3><span class="section-number">3.2.7. </span>Fcn: get_processes<a class="headerlink" href="#fcn-get-processes" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function get_processes is designed to be used by a front-end application, in order to
+present the active processes on the computer where the CRM is running. Each process will be tagged
+with a ‘killable’ flag, and only the processes associated with the project in the request will be
+‘killable’.</p>
+<div class="literal-block-wrapper docutils container" id="id15">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>get_processes</strong></span><a class="headerlink" href="#id15" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_processes&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;project&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;project name&gt;&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The CRM replies with an ack and a list of all the processes in JSON-format</p>
+<div class="literal-block-wrapper docutils container" id="id16">
+<div class="code-block-caption"><span class="caption-text">Reply: <strong>get_processes</strong></span><a class="headerlink" href="#id16" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_processes&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;processes&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;[&lt;info_object_1&gt;, &lt;info_object_2&gt;]&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>where each info object contains the following information:</p>
+<div class="literal-block-wrapper docutils container" id="id17">
+<div class="code-block-caption"><span class="caption-text">Info object from a get_processes call</span><a class="headerlink" href="#id17" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="p">{</span>
+<span class="linenos"> 2</span><span class="w">  </span><span class="nt">&quot;project&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;project id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos"> 3</span><span class="w">  </span><span class="nt">&quot;cmd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;python3 ./crm.py --ip 10.44.160.10 --port 16300&quot;</span><span class="p">,</span>
+<span class="linenos"> 4</span><span class="w">  </span><span class="nt">&quot;memory_percent&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1&quot;</span><span class="p">,</span>
+<span class="linenos"> 5</span><span class="w">  </span><span class="nt">&quot;cpu_percent&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.1&quot;</span><span class="p">,</span>
+<span class="linenos"> 6</span><span class="w">  </span><span class="nt">&quot;killable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="linenos"> 7</span><span class="w">  </span><span class="nt">&quot;created&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023-01-03 10:26:54&quot;</span><span class="p">,</span>
+<span class="linenos"> 8</span><span class="w">  </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">34253</span><span class="p">,</span>
+<span class="linenos"> 9</span><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;process name&quot;</span>
+<span class="linenos">10</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-kill-process">
+<span id="fcncrmkillprocess"></span><h3><span class="section-number">3.2.8. </span>Fcn: kill_process<a class="headerlink" href="#fcn-kill-process" title="Permalink to this heading">¶</a></h3>
+<p>This function request the CRM to kill a specific process. Use with caution! It is intended to be used by the front-end,
+which only presents the ‘killable’ processes to the user. This function is only acked when the requester is a root application.</p>
+<div class="literal-block-wrapper docutils container" id="id18">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>kill_process</strong></span><a class="headerlink" href="#id18" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;kill_process&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;process id&gt;&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-release-drone">
+<span id="fcncrmreleasedrone"></span><h3><span class="section-number">3.2.9. </span>Fcn: release_drone<a class="headerlink" href="#fcn-release-drone" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function release_drone can be called when as soon as a dss “is
+parked”. CRM will take back the ownership and the drone application
+can disconnect from the dss.</p>
+<div class="literal-block-wrapper docutils container" id="id19">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>release_drone</strong></span><a class="headerlink" href="#id19" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;release_drone&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;id_released&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;dss id&gt;&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The CRM replies with an ack if the requestor is the current owner of the
+dss, otherwise nack:</p>
+<div class="literal-block-wrapper docutils container" id="id20">
+<div class="code-block-caption"><span class="caption-text">Reply: <strong>release_drone</strong></span><a class="headerlink" href="#id20" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;release_drone&quot;</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-handover">
+<span id="fcnhandover"></span><h3><span class="section-number">3.2.10. </span>Fcn: handover<a class="headerlink" href="#fcn-handover" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-not_implemented-lightgrey.png" src="_images/CRM-not_implemented-lightgrey.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function handover is used to pass on a drone to an other
+appliction, for example during a drone swap manouver. If the drone is
+handed over to a non existing application or if the application does
+not receive the new drone CRM will take ownershop of the drone.</p>
+<div class="literal-block-wrapper docutils container" id="id21">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>handover</strong></span><a class="headerlink" href="#id21" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;handover&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;id_released&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;dss id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">5</span><span class="w">  </span><span class="nt">&quot;id_new_owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;new_owner_id&gt;&quot;</span>
+<span class="linenos">6</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>requestor is not current owner</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="fcn-launch-app">
+<span id="fcnlaunchapp"></span><h3><span class="section-number">3.2.11. </span>Fcn: launch_app<a class="headerlink" href="#fcn-launch-app" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function launch_app requests CRM to launch the app specified by
+the key “app”. The argument is the filename complete filename of the
+process to start.</p>
+<p>It can take some time to find available ports for the launched app.
+Therefore, the reply does not hold enpoint information, but id
+information. The user must call <a class="reference internal" href="#fcnclients"><span class="std std-ref">Fcn: clients</span></a> and look for the
+client id until the enpoint information is available.</p>
+<p>The command takes the optional argument <cite>extra_args</cite>, which can be
+skipped completly. If specified though, it must be a list of strings
+which will be passed directly to the application as command line
+arguments.</p>
+<div class="literal-block-wrapper docutils container" id="id22">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>launch_app</strong></span><a class="headerlink" href="#id22" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;app&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;app_monitor.py&quot;</span><span class="p">,</span>
+<span class="linenos">5</span><span class="w">  </span><span class="nt">&quot;extra_args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;--log=debug&quot;</span><span class="p">]</span>
+<span class="linenos">6</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The CRM replies with an ack and the id of the app just launched.</p>
+<div class="literal-block-wrapper docutils container" id="id23">
+<div class="code-block-caption"><span class="caption-text">Reply: <strong>launch_app</strong></span><a class="headerlink" href="#id23" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;assigned application id&gt;&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="fcn-clients">
+<span id="fcnclients"></span><h3><span class="section-number">3.2.12. </span>Fcn: clients<a class="headerlink" href="#fcn-clients" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function clients requests a JSON-formatted string which contains all connected clients. The key
+“filter” can be used to filer only the matching client id’s of
+interest, for example “dss” to get all connected dss’s, “dss001” to
+get a specific dss or an empty string “” to get all clients.  In the return
+value there is a JSON struct with id’s a keys holding JSON structs with all info.</p>
+<div class="literal-block-wrapper docutils container" id="id24">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>clients</strong></span><a class="headerlink" href="#id24" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clients&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;filter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;client id filter&gt;&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The CRM replies with an ack and the client information that that matches the search patternand.</p>
+<div class="literal-block-wrapper docutils container" id="id25">
+<div class="code-block-caption"><span class="caption-text">Reply: <strong>clients</strong></span><a class="headerlink" href="#id25" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clients&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;clients&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">5</span><span class="w">    </span><span class="nt">&quot;dss001&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hx-003&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;desc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Drone, green&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dss&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;da001&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5789</span><span class="p">},</span>
+<span class="linenos">6</span><span class="w">    </span><span class="nt">&quot;dss002&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hx-004&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;desc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Drone, blue&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dss&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;crm&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5789</span><span class="p">},</span>
+<span class="linenos">7</span><span class="w">    </span><span class="nt">&quot;da020&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AppKeyboard&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;desc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test application for debugging&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;da&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;crm&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5789</span><span class="p">}</span>
+<span class="linenos">8</span><span class="w">    </span><span class="p">}</span>
+<span class="linenos">9</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>bad arguments</p></li>
+<li><p>unknown requestor id</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="fcn-app-lost">
+<span id="fcnapplost"></span><h3><span class="section-number">3.2.13. </span>Fcn: app_lost<a class="headerlink" href="#fcn-app-lost" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+<td><img alt="_images/ArduPilot-not_implemented-lightgrey.png" src="_images/ArduPilot-not_implemented-lightgrey.png" />
+</td>
+<td><img alt="_images/DJI-not_implemented-lightgrey.png" src="_images/DJI-not_implemented-lightgrey.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>The function app_lost is called by a DSS that has lost the link to its
+application owner. This happens when no hearbeat message has been
+received in the last 5 seconds, or if the application called
+<a class="reference internal" href="DSS_API.html#fcndisconnect"><span class="std std-ref">Fcn: disconnect</span></a>.</p>
+<div class="literal-block-wrapper docutils container" id="id26">
+<div class="code-block-caption"><span class="caption-text">Function call: <strong>app_lost</strong></span><a class="headerlink" href="#id26" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;app_lost&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The CRM replies with an ack. CRM can decide to recover or redistribute
+the DSS or just let the DSS recover for it self.</p>
+<div class="literal-block-wrapper docutils container" id="id27">
+<div class="code-block-caption"><span class="caption-text">Reply: <strong>app_lost</strong></span><a class="headerlink" href="#id27" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;app_lost&quot;</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="crm-info-link-api">
+<span id="crminfoapi"></span><h2><span class="section-number">3.3. </span>CRM Info-link API<a class="headerlink" href="#crm-info-link-api" title="Permalink to this heading">¶</a></h2>
+<p id="index-3">The CRM can publish information on a publish socket. The format for
+each attribute is described in the following sections.</p>
+<section id="clients-client-list-updated">
+<span id="clients"></span><h3><span class="section-number">3.3.1. </span>CLIENTS - Client list updated<a class="headerlink" href="#clients-client-list-updated" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><img alt="_images/CRM-implemented-blue.png" src="_images/CRM-implemented-blue.png" />
+</td>
+</tr>
+</tbody>
+</table>
+<p>As soon as there are changes to the clients list of the CRM it will
+publish the updated client list under topic “clients”. The message is equal to the
+response of the clients command, <a class="reference internal" href="#fcnclients"><span class="std std-ref">Fcn: clients</span></a>.</p>
+<div class="literal-block-wrapper docutils container" id="id28">
+<div class="code-block-caption"><span class="caption-text">Info-socket: Topic <code class="docutils literal notranslate"><span class="pre">clients</span></code></span><a class="headerlink" href="#id28" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;dss001&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hx-003&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;desc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Drone, green&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dss&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;da001&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5789</span><span class="p">},</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;dss002&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hx-004&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;desc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Drone, blue&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dss&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;crm&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5789</span><span class="p">},</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;da20&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AppKeyboard&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;desc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test application for debugging&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;da&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;crm&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5789</span><span class="p">}</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="flows">
+<h2><span class="section-number">3.4. </span>Flows<a class="headerlink" href="#flows" title="Permalink to this heading">¶</a></h2>
+<p>Below follows some flows that helps describing how the platform is
+designed to be used.</p>
+<section id="drone-ownership-flow">
+<span id="ownershipflow"></span><h3><span class="section-number">3.4.1. </span>Drone ownership flow<a class="headerlink" href="#drone-ownership-flow" title="Permalink to this heading">¶</a></h3>
+<p>When using the Central Resource Controller each Drone Safety System instance has its owner that has been
+negotiated with the Central Resource Controller. The Central Resource Controller can also make decisions to
+reallocate the resources among the clients based on priorities. The
+ownership flow is the following.</p>
+<section id="flow-with-one-dss-one-application-and-the-crm">
+<h4><span class="section-number">3.4.1.1. </span>Flow with one DSS, one application and the CRM:<a class="headerlink" href="#flow-with-one-dss-one-application-and-the-crm" title="Permalink to this heading">¶</a></h4>
+<p>1. The DSS sends the register command to the CRM. The CRM responds
+with <code class="docutils literal notranslate"><span class="pre">ack</span></code> and a unique identifier for the client. The CRM owns the
+client.</p>
+<div class="mermaid">
+            sequenceDiagram
+dss001 -&gt;&gt; +CRM: register (type, ip, port)
+CRM --&gt;&gt; -dss001: ack (id=dss001)
+        </div><p>2. An application (e.g. <code class="docutils literal notranslate"><span class="pre">da001</span></code>) requests a drone from the CRM by
+issuing <a class="reference internal" href="#fcngetdrone"><span class="std std-ref">Fcn: get_drone</span></a>. CRM assigns a DSS (e.g. <code class="docutils literal notranslate"><span class="pre">dss001</span></code>) to the
+application by calling the function <a class="reference internal" href="DSS_API.html#fcnsetowner"><span class="std std-ref">Fcn: set_owner</span></a>. After that,
+the application can control the DSS. Note: The application will not
+get notified, but can easily check the ownership with the
+<a class="reference internal" href="#fcnclients"><span class="std std-ref">Fcn: clients</span></a> command.</p>
+<div class="mermaid">
+            sequenceDiagram
+da001 -&gt;&gt; +CRM: get_drone
+CRM --&gt;&gt; -da001: ack (id=dss001)
+
+CRM -&gt;&gt; +dss001: set_owner (owner=da001)
+dss001 --&gt;&gt; -CRM: ack
+
+loop
+  da001 -&gt;&gt; +CRM: clients (filter=dss001)
+  CRM --&gt;&gt; -da001: ack
+end
+        </div><p>3. As the application (e.g. <code class="docutils literal notranslate"><span class="pre">da001</span></code>) has finished it’s mission, it
+issues <a class="reference internal" href="#fcncrmreleasedrone"><span class="std std-ref">Fcn: release_drone</span></a> to the CRM. The CRM then takes
+ownership of the DSS (e.g. <code class="docutils literal notranslate"><span class="pre">dss001</span></code>) by calling <a class="reference internal" href="DSS_API.html#fcnsetowner"><span class="std std-ref">Fcn: set_owner</span></a>.
+Note: It is good practice for the application to monitor the ownership
+of the DSS and first shutdown once the ownership is successfully
+transferred back to the CRM.</p>
+<div class="mermaid">
+            sequenceDiagram
+da001 -&gt;&gt; +CRM: release_drone
+CRM --&gt;&gt; -da001: ack
+
+CRM -&gt;&gt; +dss001: set_owner (owner=crm)
+dss001 --&gt;&gt; -CRM: ack
+
+loop
+  da001 -&gt;&gt; +CRM: clients (filter=dss001)
+  CRM --&gt;&gt; -da001: ack
+end
+        </div></section>
+<section id="flow-where-there-is-a-drone-change">
+<h4><span class="section-number">3.4.1.2. </span>Flow where there is a drone change:<a class="headerlink" href="#flow-where-there-is-a-drone-change" title="Permalink to this heading">¶</a></h4>
+<p>Preconditions: dsa001 is the owner of dss001, dsa001 has called CRM
+for a drone replacement via launch_app. A drone helper application has
+been launched (dsa002) and been assigned a drone (dss002) and is ready
+to switch drones.</p>
+<p>1. dsa002 parks dss002 and issues <a class="reference internal" href="#fcncrmreleasedrone"><span class="std std-ref">Fcn: release_drone</span></a> to CRM.
+The CRM claims ownership by calling <a class="reference internal" href="DSS_API.html#fcnsetowner"><span class="std std-ref">Fcn: set_owner</span></a> to dss002 and
+maintains it’s heartbeats to dss002.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant CRM
+participant dss001
+participant dss002
+participant dsa001
+participant dsa002
+
+Note left of CRM: step 1
+dsa002 --&gt;&gt; dss002: park
+
+dsa002 -&gt;&gt; +CRM: release_drone
+CRM --&gt;&gt; -dsa002: ack
+
+CRM -&gt;&gt; +dss002: set_owner (owner=crm)
+dss002 --&gt;&gt; -CRM: ack
+
+loop
+  dsa002 -&gt;&gt; +CRM: clients (filter=dss002)
+  CRM --&gt;&gt; -dsa002: ack
+end
+
+CRM --&gt;&gt; dss002: heart_beat
+        </div><p>2. dsa002 calls <a class="reference internal" href="Application_API.html#fcnappreleasedss"><span class="std std-ref">Fcn: release_dss DEPRICATED</span></a> to dsa001, and starts issuing
+<a class="reference internal" href="DSS_API.html#getowner"><span class="std std-ref">Fcn: get_owner</span></a> to dss001 in 1Hz - waiting to be able to get the drone
+assigned from the CRM.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant CRM
+participant dss001
+participant dss002
+participant dsa001
+participant dsa002
+
+Note left of CRM: step 2
+dsa002 --&gt;&gt; dsa001: release_dss
+
+loop
+  dsa002 -&gt;&gt; +CRM: clients
+  CRM --&gt;&gt; -dsa002: ack
+end
+        </div><p>3. dsa001 parks dss001 and then issues <a class="reference internal" href="#fcncrmreleasedrone"><span class="std std-ref">Fcn: release_drone</span></a> to
+CRM. The CRM claims ownership by issuing <a class="reference internal" href="DSS_API.html#fcnsetowner"><span class="std std-ref">Fcn: set_owner</span></a> to dss001 and
+maintains it’s heartbeats.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant CRM
+participant dss001
+participant dss002
+participant dsa001
+participant dsa002
+
+Note left of CRM: step 3
+dsa001 --&gt;&gt; dss001: park
+
+dsa001 -&gt;&gt; +CRM: release_drone
+CRM --&gt;&gt; -dsa001: ack
+
+CRM -&gt;&gt; +dss001: set_owner (owner=crm)
+dss001 --&gt;&gt; -CRM: ack
+
+loop
+  dsa001 -&gt;&gt; +CRM: clients (filter=dss001)
+  CRM --&gt;&gt; -dsa001: ack
+end
+
+CRM --&gt;&gt; dss001: heart_beat
+        </div><p>4. dsa001 issues <a class="reference internal" href="#fcngetdrone"><span class="std std-ref">Fcn: get_drone</span></a> to the CRM. This triggers the CRM to set the ownership of
+dss002 to dsa001 and dsa001 can continue mission.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant CRM
+participant dss001
+participant dss002
+participant dsa001
+participant dsa002
+
+Note left of CRM: step 4
+dsa001 -&gt;&gt; +CRM: get_drone
+CRM --&gt;&gt; -dsa001: ack (id=dss002)
+
+CRM -&gt;&gt; +dss002: set_owner (owner=dsa001)
+dss002 --&gt;&gt; -CRM: ack
+
+loop
+  dsa001 -&gt;&gt; +CRM: clients (filter=dss002)
+  CRM --&gt;&gt; -dsa001: ack
+end
+        </div><p>5. dsa002 has noticed that dss001 is available and issues
+<a class="reference internal" href="#fcngetdrone"><span class="std std-ref">Fcn: get_drone</span></a> from CRM and gets the ownership of dss001.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant CRM
+participant dss001
+participant dss002
+participant dsa001
+participant dsa002
+
+Note left of CRM: step 5
+dsa002 -&gt;&gt; +CRM: get_drone
+CRM --&gt;&gt; -dsa002: ack (id=dss001)
+
+CRM -&gt;&gt; +dss001: set_owner (owner=dsa002)
+dss001 --&gt;&gt; -CRM: ack
+
+loop
+  dsa002 -&gt;&gt; +CRM: clients (filter=dss001)
+  CRM --&gt;&gt; -dsa002: ack
+end
+        </div></section>
+<section id="crm-owns-flying-dss">
+<h4><span class="section-number">3.4.1.3. </span>CRM owns flying DSS:<a class="headerlink" href="#crm-owns-flying-dss" title="Permalink to this heading">¶</a></h4>
+<p>Preconditions: CRM has the ownership of a flying DSS.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant App_SRTL
+participant DSS
+participant CRM
+
+
+CRM -&gt;&gt; +App_SRTL:(start app with: -id, -ip, -port, -dss)
+
+App_SRTL -&gt;&gt; +CRM: (get_drone(dss))
+CRM --&gt;&gt; -App_SRTL: (ack)
+CRM -&gt;&gt; +DSS: (set_owner(App_SRTL))
+DSS --&gt; -CRM: (ack)
+Note left of App_SRTL: until ack
+loop
+  App_SRTL -&gt;&gt; +DSS: (heartbeat)
+  DSS --&gt;&gt; -App_SRTL: (ack/nack)
+end
+
+App_SRTL -&gt;&gt; +DSS: (dss_srtl)
+DSS --&gt;&gt; -App_SRTL: (ack)
+
+Note left of App_SRTL: until false
+loop
+  App_SRTL -&gt;&gt; +DSS: (get_armed)
+  DSS --&gt;&gt; -App_SRTL: (true/false)
+end
+
+App_SRTL -&gt;&gt; +CRM: (release_drone)
+CRM --&gt;&gt; -App_SRTL: (ack)
+
+App_SRTL -&gt;&gt; +CRM: (unregister)
+CRM --&gt;&gt; -App_SRTL: (ack)
+Note left of App_SRTL: App_SRTL exit
+        </div></section>
+<section id="tyramote-sends-follow-me-fasle">
+<h4><span class="section-number">3.4.1.4. </span>TYRAmote sends follow_me = fasle:<a class="headerlink" href="#tyramote-sends-follow-me-fasle" title="Permalink to this heading">¶</a></h4>
+<p>Preconditions: TYRAmote, TYRApp, DSS and CRM are connected and DSS is
+following TYRAmote. TYRAmote sends follow_me = false.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant TYRAmote
+participant TYRApp
+participant DSS
+participant CRM
+
+
+TYRAmote -&gt;&gt; + TYRApp: (follow_me = false)
+TYRApp --&gt;&gt; -TYRAmote: (ack)
+TYRApp -&gt;&gt; +DSS: (follow_stream = false)
+DSS --&gt;&gt; -TYRApp: (ack)
+TYRApp -&gt;&gt; +CRM: (release_drone)
+CRM --&gt;&gt; -TYRApp: (ack)
+CRM -&gt;&gt; +DSS: (set_owner = crm)
+DSS --&gt;&gt; -CRM: (ack)
+Note left of TYRAmote: Ref flow: CRM owns flying DSS
+        </div></section>
+<section id="tyramote-quits-by-unregister">
+<h4><span class="section-number">3.4.1.5. </span>TYRAmote quits by unregister:<a class="headerlink" href="#tyramote-quits-by-unregister" title="Permalink to this heading">¶</a></h4>
+<p>Preconditions: TYRAmote, TYRApp, DSS and CRM are connected and DSS is
+following TYRAmote. TYRAmote quits by X-icon and therefore sends
+unregister to CRM.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant TYRAmote
+participant TYRApp
+participant DSS
+participant CRM
+
+
+TYRAmote -&gt;&gt; + CRM: (unregister)
+CRM --&gt;&gt; -TYRAmote: (ack)
+CRM -&gt;&gt; +TYRApp: (release_dss)
+TYRApp --&gt;&gt; -CRM: (ack)
+TYRApp -&gt;&gt; +DSS: (hover)
+DSS --&gt;&gt; -TYRApp: (ack)
+TYRApp -&gt; +CRM: (release_drone)
+CRM --&gt; -TYRApp: (ack)
+Note left of TYRApp: TYRApp close()
+CRM -&gt;&gt; + DSS: (set_owner = crm)
+DSS --&gt;&gt; -CRM: (ack)
+Note left of TYRAmote: Ref flow: CRM owns flying DSS
+        </div></section>
+<section id="tyramote-crashes">
+<h4><span class="section-number">3.4.1.6. </span>TYRAmote crashes:<a class="headerlink" href="#tyramote-crashes" title="Permalink to this heading">¶</a></h4>
+<p>Preconditions: TYRAmote, TYRApp, DSS and CRM are connected and DSS is
+following TYRAmote. TYRAmote crashes.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant TYRAmote
+participant TYRApp
+participant DSS
+participant CRM
+
+Note left of TYRAmote: TYRAmote crash
+TYRApp -&gt;&gt; +DSS: (hover)
+DSS --&gt;&gt; -TYRApp: (ack)
+TYRApp -&gt; +CRM: (release_drone)
+CRM --&gt; -TYRApp: (ack)
+Note left of TYRApp: TYRApp close()
+CRM -&gt;&gt; + DSS: (set_owner = crm)
+DSS --&gt;&gt; -CRM: (ack)
+Note left of TYRAmote: Ref flow: CRM owns flying DSS
+        </div></section>
+<section id="drone-change">
+<h4><span class="section-number">3.4.1.7. </span>Drone change:<a class="headerlink" href="#drone-change" title="Permalink to this heading">¶</a></h4>
+<p>Preconditions: App, DSS1, DSS2 and CRM are connected. DSS1 is flown by
+App and App has requested a drone cheange. Drone helper has started,
+received DSS2 and taken off. DSS1 and DSS2 publishes LLA messages.</p>
+<div class="mermaid">
+            sequenceDiagram
+participant App
+participant DSS1
+participant DroneHelper
+participant DSS2
+participant CRM
+
+DroneHelper -&gt;&gt; +DSS2: (set_alt, above DSS1)
+DSS2 --&gt;&gt; -DroneHelper: (ack)
+DroneHelper -&gt;&gt; +DSS2: (follow_stream, above DSS1)
+DSS2 --&gt;&gt; -DroneHelper: (ack)
+
+loop
+  DroneHelper -&gt;&gt; DroneHelper: (Compare DSS1 and DSS2 pos)
+end
+
+DroneHelper -&gt;&gt; +DSS2: (hover)
+DSS2 --&gt;&gt; -DroneHelper: (ack)
+DroneHelper -&gt;&gt; +CRM: (handover, DSS2 to App)
+CRM --&gt;&gt; -DroneHelper: (ack)
+DroneHelper -&gt;&gt; + DroneHelper: (pub clients)
+
+CRM -&gt;&gt; +App: (push_dss)
+App --&gt;&gt; -CRM: (ack)
+
+App --&gt;&gt; +App: (pub clients)
+
+CRM -&gt;&gt; +DSS2: (set_owner, App)
+DSS2 --&gt;&gt; -CRM: (ack)
+
+App -&gt;&gt; +DSS1: (hover)
+DSS1 --&gt;&gt; -App: (ack)
+App -&gt;&gt; +CRM: (release_drone DSS1)
+CRM --&gt;&gt; -App: (ack)
+App -&gt;&gt; +App: (pub clients)
+
+
+
+
+CRM -&gt;&gt; +DSS1: (set_owner crm)
+DSS1 --&gt;&gt; -CRM: (ack)
+Note left of DSS1: CRM owns flying dss flow
+        </div></section>
+</section>
+</section>
+</section>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo-rise-html.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="index.html">RISE Drone Platform</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DSS_API.html">2. Drone Safety System API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">3. Central Resource Manager API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#communication">3.1. Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#crm-ctrl-link-api">3.2. CRM Ctrl-link API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general">3.2.1. General</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-register">3.2.2. Fcn: register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-unregister">3.2.3. Fcn: unregister</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-get-info">3.2.4. Fcn: get_info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-get-drone">3.2.5. Fcn: get_drone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-get-performance">3.2.6. Fcn: get_performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-get-processes">3.2.7. Fcn: get_processes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-kill-process">3.2.8. Fcn: kill_process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-release-drone">3.2.9. Fcn: release_drone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-handover">3.2.10. Fcn: handover</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-launch-app">3.2.11. Fcn: launch_app</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-clients">3.2.12. Fcn: clients</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-app-lost">3.2.13. Fcn: app_lost</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#crm-info-link-api">3.3. CRM Info-link API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#clients-client-list-updated">3.3.1. CLIENTS - Client list updated</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#flows">3.4. Flows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#drone-ownership-flow">3.4.1. Drone ownership flow</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Application_API.html">4. Application API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="TYRApp_API.html">5. TYRApp API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SkarApp_API.html">6. SkarApp API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="APP_selfie_API.html">7. APP Selfie API</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="DSS_API.html" title="previous chapter"><span class="section-number">2. </span>Drone Safety System API</a></li>
+      <li>Next: <a href="Application_API.html" title="next chapter"><span class="section-number">4. </span>Application API</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Andreas Gising, Lennart Ochel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/CRM_API.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

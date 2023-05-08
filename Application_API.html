@@ -1,0 +1,306 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>4. Application API &#8212; RISE Drone Platform v1.3.0.post36-g455f561 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="5. TYRApp API" href="TYRApp_API.html" />
+    <link rel="prev" title="3. Central Resource Manager API" href="CRM_API.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="application-api">
+<span id="appapi"></span><h1><span class="section-number">4. </span>Application API<a class="headerlink" href="#application-api" title="Permalink to this heading">¶</a></h1>
+<p id="index-0">Applications are custom made, this is where the user creates an
+application utilizing the API of the Drone Safety System. Each
+application have to implement the general application support
+described in this chapter.</p>
+<section id="communication">
+<h2><span class="section-number">4.1. </span>Communication<a class="headerlink" href="#communication" title="Permalink to this heading">¶</a></h2>
+<p id="index-1">Applications must host an Application Control Link. The Ctrl
+Reply-Socket is used for helper applications to call functions and
+receive ack/nack and information. Available commands are described in
+<a class="reference internal" href="#appcontrollapi"><span class="std std-ref">Application API</span></a>.</p>
+<p>The socket ports for non CRM operations are described below. In CRM
+operations the CRM will present the ip and Ctrl-Reply-socket port for
+each client, and the publish port(s) can be requested by directly
+connecting to the client of interest and issuing get_info. The sockets
+are open for all connecting ip-numbers.</p>
+<p>Since applications often run on the same ip as CRM, the port
+number is dynamic.</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Application Sockets port definition if <strong>NOT</strong> using CRM</span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;Ctrl-Reply-socket&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5560</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;Info-Publish-Socket&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000-6000</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<section id="typical-flow">
+<span id="typicalflow"></span><h3><span class="section-number">4.1.1. </span>Typical Flow<a class="headerlink" href="#typical-flow" title="Permalink to this heading">¶</a></h3>
+<p>An exampel of a typial flow for an Applicaiton when not using the CRM.</p>
+<div class="mermaid">
+            sequenceDiagram
+Autopilot -&gt;&gt; +DSSctrl: Continous coms
+DSSctrl -&gt;&gt; +Autopilot: Continous coms
+
+
+loop
+  Application -&gt;&gt; +DSSctrl: who_controls
+  DSSctrl --&gt;&gt; -Application: APPLICATION
+end
+
+Application -&gt;&gt; +DSSctrl: upload_mission_LLA
+DSSctrl --&gt;&gt; -Application: ack
+
+Application -&gt;&gt; +DSSctrl: take_off(2m)
+DSSctrl --&gt;&gt; -Application: ack
+
+loop
+  Application --&gt;&gt; +DSSctrl: get_posD
+  DSSctrl --&gt;&gt; -Application: posD
+end
+
+Application --&gt;&gt; +DSSctrl: gogo  (start mission)
+DSSctrl --&gt;&gt; -Application: ack
+
+Application -&gt;&gt; +DSSctrl: data_stream(currentWP)
+DSSctrl --&gt;&gt; -Application: ack
+
+DSSinfo --&gt;&gt; +Application: currentWP
+
+Application -&gt;&gt; +DSSctrl: heart_beat
+DSSctrl --&gt;&gt; -Application: ack
+
+Application -&gt;&gt; +DSSctrl: DSSRtl
+DSSctrl --&gt;&gt; -Application: ack
+
+Note left of DSSctrl: Until nack
+loop
+  Application -&gt;&gt; +DSSctrl: armed
+  DSSctrl --&gt;&gt; -Application: ack/nack
+end
+
+Application -&gt;&gt; +DSSctrl: disconnect
+DSSctrl --&gt;&gt; -Application: ack
+        </div></section>
+</section>
+<section id="appcontrollapi">
+<span id="index-2"></span><span id="id1"></span><h2><span class="section-number">4.2. </span>Application API<a class="headerlink" href="#appcontrollapi" title="Permalink to this heading">¶</a></h2>
+<section id="general">
+<h3><span class="section-number">4.2.1. </span>General<a class="headerlink" href="#general" title="Permalink to this heading">¶</a></h3>
+<p>Information is carried by JSON objects that are sent over the ZeroMQ
+REQ/REP interface.</p>
+</section>
+<section id="fcn-release-dss-depricated">
+<span id="fcnappreleasedss"></span><h3><span class="section-number">4.2.2. </span>Fcn: release_dss DEPRICATED<a class="headerlink" href="#fcn-release-dss-depricated" title="Permalink to this heading">¶</a></h3>
+<p>The function <code class="docutils literal notranslate"><span class="pre">release_dss</span></code> requests the drone application to release
+the control of the connected drone. The drone application must first
+resolve possible dependencies, then stop the drone and finally release
+it by calling CRM function  <a class="reference internal" href="CRM_API.html#fcncrmreleasedrone"><span class="std std-ref">Fcn: release_drone</span></a>.</p>
+<p>The message contains a key <code class="docutils literal notranslate"><span class="pre">id</span></code> for requester id and a key
+<code class="docutils literal notranslate"><span class="pre">action</span></code> for informing the application if it’s drone is being
+replaced or if the application should quit. Valid strings for key
+<code class="docutils literal notranslate"><span class="pre">action</span></code> are “replace” and “quit”.</p>
+<p>If the key <code class="docutils literal notranslate"><span class="pre">action</span></code> is “replace” there is also a key <code class="docutils literal notranslate"><span class="pre">new_dss</span></code> with the id of the replacing dss.</p>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">Function call: <code class="docutils literal notranslate"><span class="pre">release_dss</span></code> DEPRICATED</span><a class="headerlink" href="#id3" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;release_dsss&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;replace&quot;</span><span class="p">,</span>
+<span class="linenos">5</span><span class="w">  </span><span class="nt">&quot;new_dss&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;replacing dss id&gt;&quot;</span>
+<span class="linenos">6</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>None</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="fcn-push-dss">
+<span id="fcnpushdss"></span><h3><span class="section-number">4.2.3. </span>Fcn: push_dss<a class="headerlink" href="#fcn-push-dss" title="Permalink to this heading">¶</a></h3>
+<p>The function <code class="docutils literal notranslate"><span class="pre">push_dss</span></code> is used when the CRM wants to push a new drone with corresponding DSS onto an application. If the message is nacked the CRM will take control of the DSS in question.</p>
+<p>The message contains a key <code class="docutils literal notranslate"><span class="pre">id</span></code> for requester id and a key
+<code class="docutils literal notranslate"><span class="pre">action</span></code> for informing the application if it’s drone is being
+replaced or if the application should quit. Valid strings for key
+<code class="docutils literal notranslate"><span class="pre">action</span></code> are “replace” and “quit”.</p>
+<p>If the key <code class="docutils literal notranslate"><span class="pre">action</span></code> is “replace” there is also a key <code class="docutils literal notranslate"><span class="pre">new_dss</span></code> with the id of the replacing dss.</p>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Function call: <code class="docutils literal notranslate"><span class="pre">push_dss</span></code></span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;push_dss&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;dss_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;replacing dss id&gt;&quot;</span>
+<span class="linenos">5</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>Requestor not CRM</p></li>
+<li><p>Application does not accept the dss</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="fcn-get-info">
+<span id="fcnappgetinfo"></span><h3><span class="section-number">4.2.4. </span>Fcn: get_info<a class="headerlink" href="#fcn-get-info" title="Permalink to this heading">¶</a></h3>
+<p>The function <code class="docutils literal notranslate"><span class="pre">get_info</span></code> requests the drone application prove that it is
+still alive and to share some connection information. It is typically
+sent from the CRM every now and then. The application answers with an
+ack and applicable information, the two publish ports are optional -
+if not using a publish port omitt it.</p>
+<div class="literal-block-wrapper docutils container" id="id5">
+<div class="code-block-caption"><span class="caption-text">Function call: <code class="docutils literal notranslate"><span class="pre">get_info</span></code></span><a class="headerlink" href="#id5" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_info&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;requestor id&gt;&quot;</span>
+<span class="linenos">4</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id6">
+<div class="code-block-caption"><span class="caption-text">Reply: <code class="docutils literal notranslate"><span class="pre">get_info</span></code></span><a class="headerlink" href="#id6" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;fcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+<span class="linenos">3</span><span class="w">  </span><span class="nt">&quot;call&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_info&quot;</span><span class="p">,</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;replier id&gt;&quot;</span><span class="p">,</span>
+<span class="linenos">5</span><span class="w">  </span><span class="nt">&quot;info_pub_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1234</span><span class="p">,</span>
+<span class="linenos">6</span><span class="w">  </span><span class="nt">&quot;data_pub_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5678</span>
+<span class="linenos">7</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="simple">
+<dt><strong>Nack reasons:</strong></dt><dd><ul class="simple">
+<li><p>None</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+</section>
+<section id="info-link-api">
+<span id="appinfolinkapi"></span><h2><span class="section-number">4.3. </span>Info-link API<a class="headerlink" href="#info-link-api" title="Permalink to this heading">¶</a></h2>
+<p>Each time an application is assigned or unassigned owner of a client, a list of clients owned must be published on the Info-Publish port with topic “clients”.</p>
+<div class="literal-block-wrapper docutils container" id="id7">
+<div class="code-block-caption"><span class="caption-text">Info-socket: Topic <code class="docutils literal notranslate"><span class="pre">clients</span></code></span><a class="headerlink" href="#id7" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="nt">&quot;clients&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;dss010&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;dss011&quot;</span><span class="p">]</span>
+<span class="linenos">3</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo-rise-html.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="index.html">RISE Drone Platform</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DSS_API.html">2. Drone Safety System API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CRM_API.html">3. Central Resource Manager API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">4. Application API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#communication">4.1. Communication</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#typical-flow">4.1.1. Typical Flow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#appcontrollapi">4.2. Application API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general">4.2.1. General</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-release-dss-depricated">4.2.2. Fcn: release_dss DEPRICATED</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-push-dss">4.2.3. Fcn: push_dss</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fcn-get-info">4.2.4. Fcn: get_info</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#info-link-api">4.3. Info-link API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="TYRApp_API.html">5. TYRApp API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SkarApp_API.html">6. SkarApp API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="APP_selfie_API.html">7. APP Selfie API</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="CRM_API.html" title="previous chapter"><span class="section-number">3. </span>Central Resource Manager API</a></li>
+      <li>Next: <a href="TYRApp_API.html" title="next chapter"><span class="section-number">5. </span>TYRApp API</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Andreas Gising, Lennart Ochel.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/Application_API.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
